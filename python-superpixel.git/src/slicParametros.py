@@ -27,7 +27,7 @@ from skimage.util import img_as_float
 import numpy as np
 import argparse
 import cv2
-#import cv
+import networkx as nx
 import os
 import time
 from pylab import *
@@ -149,9 +149,8 @@ fig = gcf()
     Clear files inside directories
 """
 def clear_dir(name):
-    for (raiz, diretorios, arquivos) in os.walk(dir):
-        for arquivos in arquivos:
-            os.remove(os.path.join(raiz, arquivo))
+    for (raiz, diretorios) in os.walk(dir):
+            os.remove(os.path.join(raiz, diretorios))
     
 
 def show_img(img):
@@ -160,49 +159,6 @@ def show_img(img):
     height = img.shape[0]*width/img.shape[1]
     f = plt.figure(figsize=(width, height))
     plt.imshow(img)
-"""
-def display_edges(image, g):
-    Draw edges of a RAG on its image
- 
-    Returns a modified image with the edges drawn. Edges with high weight are
-    drawn in red and edges with a low weight are drawn in green. Nodes are drawn
-    in yellow.
- 
-    Parameters
-    ----------
-    image : ndarray
-        The image to be drawn on.
-    g : RAG
-        The Region Adjacency Graph.
-    threshold : float
-        Only edges in `g` below `threshold` are drawn.
- 
-    Returns:
-    out: ndarray
-        Image with the edges drawn.
- 
-    image = image.copy()
-    max_weight = max([d['weight'] for x, y, d in g.edges_iter(data=True)])
-    min_weight = min([d['weight'] for x, y, d in g.edges_iter(data=True)])
- 
-    for edge in g.edges_iter():
-        n1, n2 = edge
- 
-        r1, c1 = map(int, rag.node[n1]['centroid'])
-        r2, c2 = map(int, rag.node[n2]['centroid'])
- 
-        green = 0,1,0
-        red = 1,0,0
- 
-        lin  = line(r1, c1, r2, c2)
-        circl = circle(r1,c1,2)
-        norm_weight = ( g[n1][n2]['weight'] - min_weight ) / ( max_weight - min_weight )
- 
-        image[lin] = norm_weight*red + (1 - norm_weight)*green
-        image[circl] = 1,1,0
- 
-    return image
-"""
 
 # Determina o que fazer quando os valores das barras de rolagem com os parâmetros do SLIC forem alterados
 def updateParametros(val):
@@ -361,28 +317,29 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
 	arff2svm.transform(pathToFile+nomeArquivoArff,pathToFile+nomeArquivoArff+".svm")
         
 
-# Classifica automaticamente todos os superpixels da imagem, pintando-os com a cor da classe correspondente
-
+# Retorna o grafo desenhado na imagem
 def desenho_rag(labels, rag, image):
-     #rag
-    lc = graph.show_rag(labels, rag, image)        
+    lc = graph.show_rag(labels, rag, c_image)        
     plt.colorbar(lc, fraction=0.03)
     io.show()
-    #fim da rag
-    
 
-def desenho_rag_c(labels, g, img):
-    gimg = color.rgb2gray(img)
-
-    edges = filters.sobel(gimg)
-    edges_rgb = color.gray2rgb(edges)
-    
-    lc = graph.show_rag(labels, g, edges_rgb)
-    
-    plt.colorbar(lc, fraction=0.03)
-    io.show()
-        
-    
+#explanacao sobre rag
+def percorrer_rag(g):
+    diction = g.edges()
+    num_nodos = g.number_of_nodes()
+    #contem os nodos que podem ser celulas
+    linha = np.array([0.])
+    n = 1
+    while n < num_nodos:
+        print "Nodo =", n
+        m = n+1
+        while m <= num_nodos:
+            #ha nodos arestas entre m e n?
+            if g.has_edge(n, m):
+                print " in nodo ", m , " peso = ", diction[(n,m)]
+            m+=1
+        n+=1
+                
 
 def classify(event):
     global image, c_image
@@ -422,28 +379,12 @@ def classify(event):
 	#Retorno de imagem com limites entre regioes marcadas em destaque.
         label_rgb = segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), labels, outline_color=p_outline)
         show_img(label_rgb)
-	
         
-        #dado rotulos da imagem e similaridade rag, faz um
-        #corte normalizado de 2 vias
-       # ncut = graph.cut_normalized(labels, rag)
-
-        #retorna nova matriz rotulada
-        #out = graph.rag_boundary(labels, ncut, connectivity=4) 
+       # mostrar_informacoes_rag(rag)
+        
+        percorrer_rag(rag)
         
         desenho_rag(labels, rag, image)
-        
-        desenho_rag_c(labels, rag, image)
-       
-        for region in regions:
-           rag.node[region['label']]['centroid'] = region['centroid']
-           
-           #error in display_edges
-       # label_rgb = display_edges(label_rgb, out)
-
-        
-       # show_img(image)
-        plt.show()
     
 # Realizar um teste de desempenho de classificação
 def crossValidate(event):    
