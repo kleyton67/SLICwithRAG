@@ -89,11 +89,8 @@ subplots_adjust(bottom=0.35)
 height, width, channels = image.shape
 axis([0, width, 0, height])
 
-#parameters for CUDA gSLICr, if used
-cuda_python = 0
-
 # Classe que será gerada quando o usuário clicar em um superpixel
-classeAtual = 1
+classeAtual = 0
 
 # Extrai os superpixels e mostra na tela com contornos
 print "Segmentos = %d, Sigma = %d, Compactness = %0.2f e Classe Atual = %d" % (p_segmentos, p_sigma, p_compactness, classeAtual)
@@ -112,7 +109,7 @@ obj = ax.imshow(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv
 slider_segmentos = Slider(axes([0.25, 0.25, 0.65, 0.03]), 'Segmentos', 10, p_maxsegmentos, valinit=p_segmentos, valfmt='%d')
 slider_sigma = Slider(axes([0.25, 0.20, 0.65, 0.03]), 'Sigma', 1, 20, valinit=p_sigma)
 slider_compactness = Slider(axes([0.25, 0.15, 0.65, 0.03]), 'Compactness', 0.01, 100, valinit=p_compactness)
-slider_classes = Slider(axes([0.25, 0.10, 0.65, 0.03]), 'Classe Atual', 1, 11, valinit=classeAtual, valfmt='%d')
+slider_classes = Slider(axes([0.25, 0.10, 0.65, 0.03]), 'Classe Atual', 0, 1, valinit=classeAtual, valfmt='%d')
 
 # Cria botoes laterais
 button_arff = Button(axes([0.80, 0.75, 0.15, 0.03]), 'Gerar Arff')
@@ -120,18 +117,10 @@ button_classify = Button(axes([0.80, 0.70, 0.15, 0.03]), 'Classificar')
 button_cv = Button(axes([0.80, 0.65, 0.15, 0.03]), 'CrossValid')
 
 # Cores usadas para preencher os superpixels com uma cor diferente para cada classe
-cores = [(128, 128, 128), (0, 255, 255), (0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 0, 255), (0, 128, 255), (255, 255, 0),
-         (128, 0, 255), (255, 255, 255), (0, 0, 0)]
+cores = [(255, 127, 0), (0, 0, 156)]
 
 # Ponteiro para a janela
 fig = gcf()
-"""
-    Clear files inside directories
-"""
-def clear_dir(name):
-    for (raiz, diretorios) in os.walk(dir):
-            os.remove(os.path.join(raiz, diretorios))
-    
 
 def show_img(img):
  
@@ -143,11 +132,6 @@ def show_img(img):
 # Determina o que fazer quando os valores das barras de rolagem com os parâmetros do SLIC forem alterados
 def updateParametros(val):
     global p_segmentos, p_sigma, p_compactness, segments, image, cuda_python
-
-    if(val == "Python SLIC"):
-	cuda_python = 0
-    elif(val == "CUDA gSLICr"):
-	cuda_python = 1
 
     p_segmentos = int("%d" % (slider_segmentos.val))
     p_sigma = slider_sigma.val
