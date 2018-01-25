@@ -6,8 +6,9 @@
   Autor: Hemerson Pistori (pistori@ucdb.br)
          Alessandro dos Santos Ferreira ( asf2005kn@hotmail.com )
          Diogo Soares ( diogo.ec.2013@gmail.com )
-	 Rodrigo Gonçalves de Branco - chamada CUDA ( rodrigo.g.branco@gmail.com )
-
+         Rodrigo Gonçalves de Branco - chamada CUDA ( rodrigo.g.branco@gmail.com )
+         Kleyton Sartori Leite - Sob orientacao de Willian Paraguassu
+     
   Descricão: Mostrar o resultado do SLIC usando diferentes parâmetors
 
   Como usar:
@@ -36,17 +37,6 @@ from extrai_atributos.extraiAtributos import ExtraiAtributos
 from wekaWrapper import Weka
 
 import arff2svm
-
-#Custom lib - gSLICrInterface
-try:
-	from build import gSLICrInterface
-	enableCuda = gSLICrInterface.checkCuda()
-except:
-	enableCuda = False
-
-
-if(enableCuda == False):
-	print "Há algum problema com a instalação do módulo gSLICrInterface ou do adaptador gráfico CUDA e portanto tal configuração não poderá ser usada."
 
 # Lê os parâmetros da linha de comando
 ap = argparse.ArgumentParser()
@@ -102,13 +92,6 @@ axis([0, width, 0, height])
 #parameters for CUDA gSLICr, if used
 cuda_python = 0
 
-if(enableCuda):
-	gSLICrInterface.setImage(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-	#inplace segment masks
-	cuda_seg = np.empty(height * width,dtype=int64)
-	gSLICrInterface.setSegMaskArray(cuda_seg)
-	cuda_seg = np.reshape(cuda_seg, (-1, width))
-
 # Classe que será gerada quando o usuário clicar em um superpixel
 classeAtual = 1
 
@@ -130,9 +113,6 @@ slider_segmentos = Slider(axes([0.25, 0.25, 0.65, 0.03]), 'Segmentos', 10, p_max
 slider_sigma = Slider(axes([0.25, 0.20, 0.65, 0.03]), 'Sigma', 1, 20, valinit=p_sigma)
 slider_compactness = Slider(axes([0.25, 0.15, 0.65, 0.03]), 'Compactness', 0.01, 100, valinit=p_compactness)
 slider_classes = Slider(axes([0.25, 0.10, 0.65, 0.03]), 'Classe Atual', 1, 11, valinit=classeAtual, valfmt='%d')
-
-if(enableCuda):
-	radio_opcao = RadioButtons(axes([0.8, 0.5, 0.18, 0.18]), ('Python SLIC','CUDA gSLICr'))
 
 # Cria botoes laterais
 button_arff = Button(axes([0.80, 0.75, 0.15, 0.03]), 'Gerar Arff')
@@ -174,17 +154,10 @@ def updateParametros(val):
     p_compactness = slider_compactness.val
     
     image = c_image.copy()
-
-    if(cuda_python == 0):
-	start_time = time.time()
-    	segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)
-	print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
-    else:
-	start_time = time.time()
-	gSLICrInterface.process( p_segmentos)
-	print("--- Tempo C++/CUDA gSLICr:          %s segundos ---" % (time.time() - start_time))
-	segments = cuda_seg
-
+    
+    start_time = time.time()
+    segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)
+    print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
     obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
     draw()
 
@@ -306,7 +279,6 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
     else:
         extraiAtributos.extractOneFile(nomeArquivoArff=nomeArquivoArff, nomeImagem=nomeImagem )
 
-    if(enableCuda):
 	pathToFile = extraiAtributos.nomePastaRaiz + extraiAtributos.nomeBancoImagens + "/"
 	print extraiAtributos.nomePastaRaiz
 	print extraiAtributos.nomeBancoImagens
@@ -315,31 +287,54 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
 	print pathToFile+nomeArquivoArff
 	print pathToFile+nomeArquivoArff+".svm"
 	arff2svm.transform(pathToFile+nomeArquivoArff,pathToFile+nomeArquivoArff+".svm")
-        
 
 # Retorna o grafo desenhado na imagem
 def desenho_rag(labels, rag, image):
     lc = graph.show_rag(labels, rag, c_image)        
+    
     plt.colorbar(lc, fraction=0.03)
     io.show()
 
-#explanacao sobre rag
-def percorrer_rag(g):
+#percorre a rag e cria um vetor de nodos que possivelmente sao celulas
+def percorrer_rag(g, precisao = 0.9999):
     diction = g.edges()
     num_nodos = g.number_of_nodes()
     #contem os nodos que podem ser celulas
-    linha = np.array([0.])
     n = 1
+    #lista_nos()
+    lista_no = np.array([])
     while n < num_nodos:
         print "Nodo =", n
         m = n+1
+        #Controladores para reconhecimento da celula
+        cont_peso = 0
+        cont = 0
         while m <= num_nodos:
             #ha nodos arestas entre m e n?
             if g.has_edge(n, m):
-                print " in nodo ", m , " peso = ", diction[(n,m)]
-            m+=1
-        n+=1
+                cont_peso += g.edges[(n,m)]['weight']
+                cont+=1
+                print " in nodo ", m , " peso = ", diction[(n,m)]['weight']#[weight] faz com que retorne apenas o numero real
                 
+            m+=1
+        #faz a media e analisa se eh celula ou nao
+        if cont != 0 and cont_peso/cont <= precisao:
+            lista_no = np.append(lista_no, n)
+        n+=1
+        
+        print lista_no
+    return lista_no
+
+def retirar_arestas(array, rag):
+    for n in array:
+        m = n+1
+        for m in array:
+            if rag.has_edge(n,m) :
+                array = np.delete(array, n)
+            n+=1
+    return array
+                
+
 
 def classify(event):
     global image, c_image
@@ -408,8 +403,5 @@ slider_classes.on_changed(updateClasseAtual)
 button_arff.on_clicked(extractArff)
 button_classify.on_clicked(classify)
 button_cv.on_clicked(crossValidate)
-if(enableCuda):
-	radio_opcao.on_clicked(updateParametros)
-
 
 show()
