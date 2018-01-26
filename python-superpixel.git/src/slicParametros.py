@@ -45,9 +45,9 @@ ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", d
 ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de imagens", default="../data/demo",
                 type=str)
 ap.add_argument("-mse", "--maxsegmentos", required=False, help="Número máximo de segmentos", default=1000, type=int)
-ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=200, type=int)
-ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=20, type=int)
-ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic", default=100.0, type=float)
+ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=400, type=int)
+ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=4, type=int)
+ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic", default=20.0, type=float)
 ap.add_argument("-so", "--outline", required=False, help="Deixa borda do superpixel mais larga: 0 ou 1.", default=0, type=int)
 ap.add_argument("-c",  "--classname", required=False, help="Classificador", default="weka.classifiers.trees.J48", type=str)
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
@@ -59,6 +59,7 @@ p_maxsegmentos = args["maxsegmentos"]
 p_segmentos = args["segmentos"]
 p_sigma = args["sigma"]
 p_compactness = args["compactness"]
+#realca a fronteira
 p_outline = None if (args["outline"] == 0) else (1, 1, 0)
 
 classname = args["classname"]
@@ -97,10 +98,6 @@ print "Segmentos = %d, Sigma = %d, Compactness = %0.2f e Classe Atual = %d" % (p
 start_time = time.time()
 segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)
 print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
-
-
-############################################################
-rag = graph.rag_mean_color(img_as_float(image), (segments+1), mode="similarity")
 
 obj = ax.imshow(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
 #obj = ax.imshow(mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), y, outline_color=p_outline))
@@ -142,7 +139,7 @@ def updateParametros(val):
     start_time = time.time()
     segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)
     print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
-    obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
+    obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, 0)), segments, outline_color=p_outline))
     draw()
 
 
@@ -223,7 +220,8 @@ def updateImagem(mask, mask_inv, classeAtual):
     global image, c_image
     cor_classe = np.zeros((height,width,3), np.uint8)
     cor_classe[:, :] = cores[classeAtual]
-    image_classe = cv2.addWeighted(c_image, 0.7, cor_classe, 0.3, 0)
+    #image_classe = cv2.addWeighted(c_image, 0.7, cor_classe, 0.3, 0)
+    image_classe = cv2.addWeighted(c_image, 0, cor_classe, 10, 0)
     image_classe = cv2.bitwise_and(image_classe, image_classe, mask=mask)
     
     image = cv2.bitwise_and(image, image, mask=mask_inv)
@@ -232,7 +230,7 @@ def updateImagem(mask, mask_inv, classeAtual):
 
     #ax.imshow(mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments))
     obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
-
+    
     draw()  # Associa a função que pinta o segmento (onclick) com o click do mouse
 
 
@@ -323,6 +321,8 @@ def retirar_arestas(array, rag):
 def classify(event):
     global image, c_image
     
+    rag = graph.rag_mean_color(img_as_float(image), (segments+1), mode="similarity")
+    
     # Extrai os atributos e salva em um arquivo arff
     extractArff( overwrite=False )
     
@@ -354,16 +354,8 @@ def classify(event):
 
 	#Retornar uma imagem RGB com etiquetas com codigos de cores sao pintadas sobre a imagem
         label_rgb = color.label2rgb(labels, img_as_float(image), kind='avg')
-
-	#Retorno de imagem com limites entre regioes marcadas em destaque.
-        label_rgb = segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), labels, outline_color=p_outline)
-        show_img(label_rgb)
         
-       # mostrar_informacoes_rag(rag)
-        
-        percorrer_rag(rag)
-        
-        desenho_rag(labels, rag, image)
+        #usar essa label para criar imagem para criar a rag
     
 # Realizar um teste de desempenho de classificação
 def crossValidate(event):    
