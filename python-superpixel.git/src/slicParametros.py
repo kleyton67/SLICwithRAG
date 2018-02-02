@@ -69,6 +69,7 @@ pasta_banco_imagens = args["banco"]
 nome_imagem_completo = args["imagem"]
 
 image = np.flipud(cv2.imread(nome_imagem_completo))
+#duplicado para guradar somente a parte pintada da rag
 c_image = image.copy()
 image_origin = image.copy()#somente na rag
 
@@ -99,7 +100,8 @@ start_time = time.time()
 segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)
 print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
 
-obj = ax.imshow(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
+#imprimi imagem com segmentacao
+obj_aux = obj = ax.imshow(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
 #obj = ax.imshow(mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), y, outline_color=p_outline))
 
 # Criar as barras de rolagem para manipular o número de segmentos e o sigma (parâmetros do SLIC)
@@ -119,16 +121,9 @@ cores = [(255, 127, 0), (0, 0, 156)]
 # Ponteiro para a janela
 fig = gcf()
 
-def show_img(img):
- 
-    width = img.shape[1]/75.0
-    height = img.shape[0]*width/img.shape[1]
-    f = plt.figure(figsize=(width, height))
-    plt.imshow(img)
-
 # Determina o que fazer quando os valores das barras de rolagem com os parâmetros do SLIC forem alterados
 def updateParametros(val):
-    global p_segmentos, p_sigma, p_compactness, segments, image, cuda_python
+    global p_segmentos, p_sigma, p_compactness, segments, image
 
     p_segmentos = int("%d" % (slider_segmentos.val))
     p_sigma = slider_sigma.val
@@ -222,17 +217,15 @@ def updateImagem(mask, mask_inv, classeAtual):
     cor_classe[:, :] = cores[classeAtual]
     #image_classe = cv2.addWeighted(c_image, 0.7, cor_classe, 0.3, 0)
     image_classe = cv2.addWeighted(c_image, 0, cor_classe, 10, 0)
-    image_classe = cv2.bitwise_and(image_classe, image_classe, mask=mask)
+    image_classe= cv2.bitwise_and(image_classe, image_classe, mask=mask)
     
     image = cv2.bitwise_and(image, image, mask=mask_inv)
-    mask[:] = 255
+    mask[:] = 255  
     image = cv2.bitwise_or(image, image_classe, mask=mask)
-
-    #ax.imshow(mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments))
-    obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
     
-    draw()  # Associa a função que pinta o segmento (onclick) com o click do mouse
+    obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
 
+    draw()  # Apenas associa a função que pinta o segmento (onclick) com o click do mouse
 
 
 # Pinta o segmento onde o usuário clicou com a cor predefinida para a classe
@@ -272,7 +265,7 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
 
 # Retorna o grafo desenhado na imagem
 def desenho_rag(labels, rag, image):
-    lc = graph.show_rag(labels, rag, c_image)        
+    lc = graph.show_rag(labels, rag, image)        
     
     plt.colorbar(lc, fraction=0.03)
     io.show()
@@ -347,15 +340,14 @@ def classify(event):
     finally:
         if(arquivo is not None and os.path.isfile(arquivo)):
             os.remove(arquivo)
+    
+    io.imshow(obj_aux)
             
     #segments herded for segmentation slic in line 117
-	labels = segments + 1
-        regions = regionprops(labels)
+    #labels = segments + 1
 
 	#Retornar uma imagem RGB com etiquetas com codigos de cores sao pintadas sobre a imagem
-        label_rgb = color.label2rgb(labels, img_as_float(image), kind='avg')
-        
-        #usar essa label para criar imagem para criar a rag
+    #label_rgb = color.label2rgb(labels, img_as_float(image), kind='avg')
     
 # Realizar um teste de desempenho de classificação
 def crossValidate(event):    
