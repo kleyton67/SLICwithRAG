@@ -1,7 +1,5 @@
 *.pyc
 data/*
-src/data
-src/data/*
 !data/imagem_de_teste.jpg
 *~ 
 *wrap* 
@@ -9,8 +7,8 @@ src/data/*
 *.so 
 *.pyc
 *.cxx
-gSLICrInterface.py
 src/build
 src/build/*
 !data/demo/.gitignore
 !data/slicParametros.png
+*.txt

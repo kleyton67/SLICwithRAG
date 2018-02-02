@@ -71,7 +71,7 @@ nome_imagem_completo = args["imagem"]
 image = np.flipud(cv2.imread(nome_imagem_completo))
 #duplicado para guradar somente a parte pintada da rag
 c_image = image.copy()
-image_origin = image.copy()#somente na rag
+image_obj = image.copy()#somente na rag
 
 #Separa o nome da pasta onde está a imagem do nome do arquivo dentro da pasta
 caminho, nome_imagem = os.path.split(nome_imagem_completo)
@@ -101,7 +101,7 @@ segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=
 print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
 
 #imprimi imagem com segmentacao
-obj_aux = obj = ax.imshow(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
+obj = ax.imshow(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
 #obj = ax.imshow(mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), y, outline_color=p_outline))
 
 # Criar as barras de rolagem para manipular o número de segmentos e o sigma (parâmetros do SLIC)
@@ -116,7 +116,7 @@ button_classify = Button(axes([0.80, 0.70, 0.15, 0.03]), 'Classificar')
 button_cv = Button(axes([0.80, 0.65, 0.15, 0.03]), 'CrossValid')
 
 # Cores usadas para preencher os superpixels com uma cor diferente para cada classe
-cores = [(255, 127, 0), (0, 0, 156)]
+cores = [(255, 255, 255), (0, 0, 0)]
 
 # Ponteiro para a janela
 fig = gcf()
@@ -255,12 +255,6 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
         extraiAtributos.extractOneFile(nomeArquivoArff=nomeArquivoArff, nomeImagem=nomeImagem )
 
 	pathToFile = extraiAtributos.nomePastaRaiz + extraiAtributos.nomeBancoImagens + "/"
-	print extraiAtributos.nomePastaRaiz
-	print extraiAtributos.nomeBancoImagens
-	print extraiAtributos.nomePastaRaiz+nomeArquivoArff
-	print extraiAtributos.nomePastaRaiz+nomeArquivoArff+".svm"
-	print pathToFile+nomeArquivoArff
-	print pathToFile+nomeArquivoArff+".svm"
 	arff2svm.transform(pathToFile+nomeArquivoArff,pathToFile+nomeArquivoArff+".svm")
 
 # Retorna o grafo desenhado na imagem
@@ -269,9 +263,26 @@ def desenho_rag(labels, rag, image):
     
     plt.colorbar(lc, fraction=0.03)
     io.show()
-
+    
+def percorrer_rag_adj(graph):
+    '''
+        Verifica nodos adjacentes e retorna informacoes
+        
+    '''
+    for no in graph.adjacency():
+        print "cor no_1 = ", graph.nodes.data('mean color')
+       # print "cor no_2 = ", graph.nodes[no_2]['mean color']    
 #percorre a rag e cria um vetor de nodos que possivelmente sao celulas
 def percorrer_rag(g, precisao = 0.9999):
+    '''
+    Funcao O(n^2)
+    recebe a rag e precisao opcional
+    
+    retorna nodos sendo posiveis celulas
+    
+    Fazer refinamento para retirar nodos repetidos
+    
+    '''
     diction = g.edges()
     num_nodos = g.number_of_nodes()
     #contem os nodos que podem ser celulas
@@ -314,8 +325,6 @@ def retirar_arestas(array, rag):
 def classify(event):
     global image, c_image
     
-    rag = graph.rag_mean_color(img_as_float(image), (segments+1), mode="similarity")
-    
     # Extrai os atributos e salva em um arquivo arff
     extractArff( overwrite=False )
     
@@ -340,14 +349,10 @@ def classify(event):
     finally:
         if(arquivo is not None and os.path.isfile(arquivo)):
             os.remove(arquivo)
-    
-    io.imshow(obj_aux)
             
-    #segments herded for segmentation slic in line 117
-    #labels = segments + 1
-
-	#Retornar uma imagem RGB com etiquetas com codigos de cores sao pintadas sobre a imagem
-    #label_rgb = color.label2rgb(labels, img_as_float(image), kind='avg')
+    rag = graph.rag_mean_color(img_as_float(image), (segments+1), mode="similarity")
+    
+    percorrer_rag_adj(rag)
     
 # Realizar um teste de desempenho de classificação
 def crossValidate(event):    
