@@ -19,10 +19,10 @@
 # Importa bibliotecas necessárias
 
 from skimage import data, segmentation, color, filters, io
+from skimage.future import graph
 from skimage.draw import line, circle
 from matplotlib import pyplot as plt
 from skimage.measure import regionprops
-from skimage.future import graph
 
 from skimage.util import img_as_float
 import numpy as np
@@ -264,16 +264,79 @@ def desenho_rag(labels, rag, image):
     plt.colorbar(lc, fraction=0.03)
     io.show()
     
-def percorrer_rag_adj(graph):
+#Modos de percorrer o grafo
+
+def percorrer_rag_adj_nodos(graph):
     '''
-        Verifica nodos adjacentes e retorna informacoes
+        Algoritmo:
+            graph.adjacency retorna uma tupla, a partir disso eh lido
+            o nodo e seus adjacentes, com o g.nodes eh possivel 
+            acessar o ['mean color'], com isso sao analisados
+            e verificados se nenhum de seus visinhos sao iguais
+        
+            exemplos:
+                >>> knights = {'gallahad': 'the pure', 'robin': 'the brave'}
+                >>> for k, v in knights.items():
+                    ...     print(k, v)
+                    ...
+                    gallahad the pure
+                    robin the brave
+                    Implentacao:
+                        for n in graph.adjacency():
+                            print n
+                        print "Tamanho : ", len(n)
+                        print "pos 1 ", n[0]
+                        a = n[1]
+                        print "Nodos adjacentes:"
+                        for nodo, info in a.items():
+                            print nodo
+                            print info
+                            
+            for nodo, info in diction.items():
+                #seu vizinho tambem eh uma celula?
+                comp = graph.node[nodo_p]['mean color']==graph.node[nodo]['mean color']
+                if comp[0]:
+                    #contador adiciona e elemento nao sera inserido no array
+                    print "Celulas ja contada"
+                    cont += 1
+                        
+    '''    
+    #n eh uma tupla
+    celulas = [0]
+    cel = np.array([0, 0, 0])
+    #n  recebe a adjacencia de um nodo
+    for n in graph.adjacency():
+        #n[1] eh o seu nodo, n[2] nodos adjacents em um dict
+        cont  = 0
+        nodo_p = n[0]
+        diction = n[1]
+        #comp retorna ma matriz booleana
+        #eh uma celula?
+        comp = graph.node[nodo_p]['mean color']==cel
+        if comp[0]:
+            for nodo, info in diction.items():
+                #seu vizinho tambem eh uma celula?
+                comp = graph.node[nodo_p]['mean color']==graph.node[nodo]['mean color']
+                if comp[0]:
+                    #contador adiciona e elemento nao sera inserido no array
+                    cont += 1
+            if cont == 0:
+                celulas += (nodo_p,)
+                    
+    return celulas
+
+def mostrar_grafo_info(graph):
+    '''
+        Percorre a rag e imprime informacoes de cor media
         
     '''
-    for no in graph.adjacency():
-        print "cor no_1 = ", graph.nodes.data('mean color')
-       # print "cor no_2 = ", graph.nodes[no_2]['mean color']    
+    
+    NDV = graph.nodes(data=True)
+    for n, dd in NDV: 
+        print((n, dd.get('mean color')))
+            
 #percorre a rag e cria um vetor de nodos que possivelmente sao celulas
-def percorrer_rag(g, precisao = 0.9999):
+def percorrer_rag_aresta(g, precisao = 0.9999):
     '''
     Funcao O(n^2)
     recebe a rag e precisao opcional
@@ -350,9 +413,15 @@ def classify(event):
         if(arquivo is not None and os.path.isfile(arquivo)):
             os.remove(arquivo)
             
-    rag = graph.rag_mean_color(img_as_float(image), (segments+1), mode="similarity")
     
-    percorrer_rag_adj(rag)
+    labels = segments+1
+    rag = graph.rag_mean_color(img_as_float(image), labels, connectivity=2, mode='similarity',sigma=p_sigma) 
+    #print rag.node[300]['mean color']
+    mostrar_grafo_info(rag)
+    celulas = percorrer_rag_adj_nodos(rag)
+    print celulas
+    print len(celulas)
+    desenho_rag(labels, rag, image)#
     
 # Realizar um teste de desempenho de classificação
 def crossValidate(event):    
