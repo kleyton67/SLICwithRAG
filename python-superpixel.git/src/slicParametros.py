@@ -46,8 +46,8 @@ ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de image
                 type=str)
 ap.add_argument("-mse", "--maxsegmentos", required=False, help="Número máximo de segmentos", default=1000, type=int)
 ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=400, type=int)
-ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=4, type=int)
-ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic", default=20.0, type=float)
+ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=5, type=int)
+ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic", default=6.0, type=float)
 ap.add_argument("-so", "--outline", required=False, help="Deixa borda do superpixel mais larga: 0 ou 1.", default=0, type=int)
 ap.add_argument("-c",  "--classname", required=False, help="Classificador", default="weka.classifiers.trees.J48", type=str)
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
@@ -108,7 +108,7 @@ obj = ax.imshow(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv
 slider_segmentos = Slider(axes([0.25, 0.25, 0.65, 0.03]), 'Segmentos', 10, p_maxsegmentos, valinit=p_segmentos, valfmt='%d')
 slider_sigma = Slider(axes([0.25, 0.20, 0.65, 0.03]), 'Sigma', 1, 20, valinit=p_sigma)
 slider_compactness = Slider(axes([0.25, 0.15, 0.65, 0.03]), 'Compactness', 0.01, 100, valinit=p_compactness)
-slider_classes = Slider(axes([0.25, 0.10, 0.65, 0.03]), 'Classe Atual', 0, 1, valinit=classeAtual, valfmt='%d')
+slider_classes = Slider(axes([0.25, 0.10, 0.65, 0.03]), 'Classe Atual', 0, 2, valinit=classeAtual, valfmt='%d')
 
 # Cria botoes laterais
 button_arff = Button(axes([0.80, 0.75, 0.15, 0.03]), 'Gerar Arff')
@@ -134,7 +134,7 @@ def updateParametros(val):
     start_time = time.time()
     segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)
     print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
-    obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, 0)), segments, outline_color=p_outline))
+    obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
     draw()
 
 
@@ -264,6 +264,25 @@ def desenho_rag(labels, rag, image):
     plt.colorbar(lc, fraction=0.03)
     io.show()
     
+def mostrar_imagens(image, image2):
+    '''
+        Plota as duas imagens uma do lado da outra na mesma janela
+    '''
+    fig, ax = plt.subplots(ncols=2, sharex=True, sharey=True,
+                           figsize=(8, 4))
+    
+    ax[0].imshow(image2)
+    ax[0].set_title('Original')
+    
+    ax[1].imshow(image)
+    ax[1].set_title('Apos Classificacao')
+    
+    for a in ax:
+        a.axis('off')
+    
+    plt.tight_layout()
+    plt.show()
+
 #Modos de percorrer o grafo
 
 def percorrer_rag_adj_nodos(graph):
@@ -273,6 +292,9 @@ def percorrer_rag_adj_nodos(graph):
             o nodo e seus adjacentes, com o g.nodes eh possivel 
             acessar o ['mean color'], com isso sao analisados
             e verificados se nenhum de seus visinhos sao iguais
+        Complexidade: 
+            O(n) geralmente, considerando que cada no se conecta no maximo, com 
+            mais  8 entao seria O(8n) aproximadamente
         
             exemplos:
                 >>> knights = {'gallahad': 'the pure', 'robin': 'the brave'}
@@ -299,6 +321,12 @@ def percorrer_rag_adj_nodos(graph):
                     #contador adiciona e elemento nao sera inserido no array
                     print "Celulas ja contada"
                     cont += 1
+                    
+                Problemas: ha um erro quando se usa muitos superpixeis, uma 
+                celula fica muito perto da outra e atrapalha a identificacao da 
+                mesma
+                
+                Discussao com orientador: O uso de digrafo nos auxiliaria?
                         
     '''    
     #n eh uma tupla
@@ -306,21 +334,28 @@ def percorrer_rag_adj_nodos(graph):
     cel = np.array([0, 0, 0])
     #n  recebe a adjacencia de um nodo
     for n in graph.adjacency():
+        parar = False
+        print n
         #n[1] eh o seu nodo, n[2] nodos adjacents em um dict
-        cont  = 0
         nodo_p = n[0]
         diction = n[1]
         #comp retorna ma matriz booleana
         #eh uma celula?
         comp = graph.node[nodo_p]['mean color']==cel
         if comp[0]:
+            print "nodo %d eh uma celula" % nodo_p
             for nodo, info in diction.items():
                 #seu vizinho tambem eh uma celula?
                 comp = graph.node[nodo_p]['mean color']==graph.node[nodo]['mean color']
-                if comp[0]:
-                    #contador adiciona e elemento nao sera inserido no array
-                    cont += 1
-            if cont == 0:
+                if comp[0] and ((nodo in celulas) or (nodo_p in celulas)):
+                    parar = True
+                    #se ha outro nodo como celula e seja adjacente excluir
+                    if parar:
+                        celulas.remove(nodo)
+                    print "nodo %d tbm eh celula" % nodo
+                
+            if not parar:
+                print "nodo adicionado"
                 celulas += (nodo_p,)
                     
     return celulas
@@ -334,60 +369,38 @@ def mostrar_grafo_info(graph):
     NDV = graph.nodes(data=True)
     for n, dd in NDV: 
         print((n, dd.get('mean color')))
-            
-#percorre a rag e cria um vetor de nodos que possivelmente sao celulas
-def percorrer_rag_aresta(g, precisao = 0.9999):
-    '''
-    Funcao O(n^2)
-    recebe a rag e precisao opcional
-    
-    retorna nodos sendo posiveis celulas
-    
-    Fazer refinamento para retirar nodos repetidos
-    
-    '''
-    diction = g.edges()
-    num_nodos = g.number_of_nodes()
-    #contem os nodos que podem ser celulas
-    n = 1
-    #lista_nos()
-    lista_no = np.array([])
-    while n < num_nodos:
-        print "Nodo =", n
-        m = n+1
-        #Controladores para reconhecimento da celula
-        cont_peso = 0
-        cont = 0
-        while m <= num_nodos:
-            #ha nodos arestas entre m e n?
-            if g.has_edge(n, m):
-                cont_peso += g.edges[(n,m)]['weight']
-                cont+=1
-                print " in nodo ", m , " peso = ", diction[(n,m)]['weight']#[weight] faz com que retorne apenas o numero real
-                
-            m+=1
-        #faz a media e analisa se eh celula ou nao
-        if cont != 0 and cont_peso/cont <= precisao:
-            lista_no = np.append(lista_no, n)
-        n+=1
-        
-        print lista_no
-    return lista_no
 
 def retirar_arestas(array, rag):
     for n in array:
         m = n+1
         for m in array:
             if rag.has_edge(n,m) :
-                array = np.delete(array, n)
+                array.remove(m)
+                m-=1
             n+=1
     return array
                 
 
+def grafo(labels, image):
+    '''
+    
+        Responsavel pelas operacoes com grafos
+    
+    '''
+    rag = graph.rag_mean_color(img_as_float(image), labels, connectivity=3, mode='similarity',sigma=p_sigma) 
+    #print rag.node[300]['mean color']
+    #desenho_rag(labels, rag, image)
+    cel = percorrer_rag_adj_nodos(rag)
+    rag_direct = rag.to_directed()
+    print list(rag_direct.edges)
+    print "Celulas encontradas"
+    print cel
+    print len(cel)
 
 def classify(event):
     global image, c_image
     
+    start_time = time.time()
     # Extrai os atributos e salva em um arquivo arff
     extractArff( overwrite=False )
     
@@ -413,15 +426,12 @@ def classify(event):
         if(arquivo is not None and os.path.isfile(arquivo)):
             os.remove(arquivo)
             
+    print("--- Tempo para classificacao Weka --- %s segundos" % (time.time() - start_time))
+            
+    grafo(segments+1, image)
     
-    labels = segments+1
-    rag = graph.rag_mean_color(img_as_float(image), labels, connectivity=2, mode='similarity',sigma=p_sigma) 
-    #print rag.node[300]['mean color']
-    mostrar_grafo_info(rag)
-    celulas = percorrer_rag_adj_nodos(rag)
-    print celulas
-    print len(celulas)
-    desenho_rag(labels, rag, image)#
+    mostrar_imagens(image, c_image)
+            
     
 # Realizar um teste de desempenho de classificação
 def crossValidate(event):    
