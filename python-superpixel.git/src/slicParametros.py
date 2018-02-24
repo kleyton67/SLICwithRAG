@@ -259,6 +259,16 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
 
 # Retorna o grafo desenhado na imagem
 def desenho_rag(labels, rag, image):
+    '''
+        Parametro: 
+            labels: array 2d
+            grafo
+            Imagem
+        retorno:
+            nada
+        
+        Imprime o grafo em cima da imagem
+    '''
     lc = graph.show_rag(labels, rag, image)        
     
     plt.colorbar(lc, fraction=0.03)
@@ -266,7 +276,13 @@ def desenho_rag(labels, rag, image):
     
 def mostrar_imagens(image, image2):
     '''
-        Plota as duas imagens uma do lado da outra na mesma janela
+    Parametro 
+        duas imagems: Original e copia
+    
+    retorno
+        Nada
+        
+    Plota as duas imagens uma do lado da outra na mesma janela
     '''
     fig, ax = plt.subplots(ncols=2, sharex=True, sharey=True,
                            figsize=(8, 4))
@@ -283,82 +299,60 @@ def mostrar_imagens(image, image2):
     plt.tight_layout()
     plt.show()
 
-#Modos de percorrer o grafo
+def find_in_tuple_2(array, elemento):
+    '''
+        parametros:
+            tuple:  dimensao 2
+            elemento: dado procurado
+            
+        return:
+            a, b inteiros com a posicoes do dado(sendo a primeira posicao = 0)
+            -1 se elemento nao encontrado
+    '''
+    
+    for aux in array:
+        if elemento in aux:
+            return array.index(aux), aux.index(elemento)
+    return -1, -1
 
 def percorrer_rag_adj_nodos(graph):
     '''
-        Algoritmo:
-            graph.adjacency retorna uma tupla, a partir disso eh lido
-            o nodo e seus adjacentes, com o g.nodes eh possivel 
-            acessar o ['mean color'], com isso sao analisados
-            e verificados se nenhum de seus visinhos sao iguais
-        Complexidade: 
-            O(n) geralmente, considerando que cada no se conecta no maximo, com 
-            mais  8 entao seria O(8n) aproximadamente
-        
-            exemplos:
-                >>> knights = {'gallahad': 'the pure', 'robin': 'the brave'}
-                >>> for k, v in knights.items():
-                    ...     print(k, v)
-                    ...
-                    gallahad the pure
-                    robin the brave
-                    Implentacao:
-                        for n in graph.adjacency():
-                            print n
-                        print "Tamanho : ", len(n)
-                        print "pos 1 ", n[0]
-                        a = n[1]
-                        print "Nodos adjacentes:"
-                        for nodo, info in a.items():
-                            print nodo
-                            print info
-                            
-            for nodo, info in diction.items():
-                #seu vizinho tambem eh uma celula?
-                comp = graph.node[nodo_p]['mean color']==graph.node[nodo]['mean color']
-                if comp[0]:
-                    #contador adiciona e elemento nao sera inserido no array
-                    print "Celulas ja contada"
-                    cont += 1
-                    
-                Problemas: ha um erro quando se usa muitos superpixeis, uma 
-                celula fica muito perto da outra e atrapalha a identificacao da 
-                mesma
-                
-                Discussao com orientador: O uso de digrafo nos auxiliaria?
+        Parametros: 
+            Grafo
+        Return:
+            Uma list de de celulas identificadas como celulas
                         
     '''    
-    #n eh uma tupla
-    celulas = [0]
+    #celulas eh uma tupla
+    celulas_totais = []
     cel = np.array([0, 0, 0])
     #n  recebe a adjacencia de um nodo
     for n in graph.adjacency():
-        parar = False
-        print n
         #n[1] eh o seu nodo, n[2] nodos adjacents em um dict
         nodo_p = n[0]
         diction = n[1]
         #comp retorna ma matriz booleana
-        #eh uma celula?
+        #n eh uma celula?
         comp = graph.node[nodo_p]['mean color']==cel
         if comp[0]:
-            print "nodo %d eh uma celula" % nodo_p
+            #n eh uma celula, mas ele ja esta no vetor?
+            i, j = find_in_tuple_2(celulas_totais, nodo_p)
+            if(i == -1) or (j == -1):
+                celulas = [nodo_p]
+            else:
+                celulas = celulas_totais[i]
             for nodo, info in diction.items():
                 #seu vizinho tambem eh uma celula?
-                comp = graph.node[nodo_p]['mean color']==graph.node[nodo]['mean color']
-                if comp[0] and ((nodo in celulas) or (nodo_p in celulas)):
-                    parar = True
-                    #se ha outro nodo como celula e seja adjacente excluir
-                    if parar:
-                        celulas.remove(nodo)
-                    print "nodo %d tbm eh celula" % nodo
-                
-            if not parar:
-                print "nodo adicionado"
-                celulas += (nodo_p,)
+                comp = graph.node[nodo]['mean color']==cel
+                if comp[0]:
+                    #ele ja esta no vetor?
+                    if nodo not in celulas:
+                        #se for celula e nao estiver no vetor adicionar
+                        celulas+=(nodo,)
+            celulas_totais += [celulas]
+
                     
-    return celulas
+    return celulas_totais
 
 def mostrar_grafo_info(graph):
     '''
@@ -391,8 +385,6 @@ def grafo(labels, image):
     #print rag.node[300]['mean color']
     #desenho_rag(labels, rag, image)
     cel = percorrer_rag_adj_nodos(rag)
-    rag_direct = rag.to_directed()
-    print list(rag_direct.edges)
     print "Celulas encontradas"
     print cel
     print len(cel)
