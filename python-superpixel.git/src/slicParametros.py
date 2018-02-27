@@ -256,7 +256,7 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
 
 	pathToFile = extraiAtributos.nomePastaRaiz + extraiAtributos.nomeBancoImagens + "/"
 	arff2svm.transform(pathToFile+nomeArquivoArff,pathToFile+nomeArquivoArff+".svm")
-
+ 
 # Retorna o grafo desenhado na imagem
 def desenho_rag(labels, rag, image):
     '''
@@ -274,6 +274,19 @@ def desenho_rag(labels, rag, image):
     plt.colorbar(lc, fraction=0.03)
     io.show()
     
+def comparar_labels(labels, labels2):
+    '''
+        Imprime dois labels
+    '''
+    fig, ax = plt.subplots(nrows=2, sharex=True, sharey=True, figsize=(6, 8))
+
+    ax[0].imshow(labels)
+    ax[1].imshow(labels2)
+
+    for a in ax:
+        a.axis('off')
+    
+
 def mostrar_imagens(image, image2):
     '''
     Parametro 
@@ -388,6 +401,7 @@ def grafo(labels, image):
     print "Celulas encontradas"
     print cel
     print len(cel)
+    print "Normalizar corte"
 
 def classify(event):
     global image, c_image
