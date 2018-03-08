@@ -386,7 +386,6 @@ def retirar_arestas(array, rag):
                 m-=1
             n+=1
     return array
-                
 
 def grafo(labels, image):
     '''
@@ -394,14 +393,22 @@ def grafo(labels, image):
         Responsavel pelas operacoes com grafos
     
     '''
-    rag = graph.rag_mean_color(img_as_float(image), labels, connectivity=3, mode='similarity',sigma=p_sigma) 
+    rag = graph.rag_mean_color(img_as_float(image), labels,sigma=p_sigma) 
     #print rag.node[300]['mean color']
     #desenho_rag(labels, rag, image)
     cel = percorrer_rag_adj_nodos(rag)
-    print "Celulas encontradas"
+    print "Celulas encontradas(Rag Original)"
     print cel
     print len(cel)
-    print "Normalizar corte"
+    desenho_rag(labels, rag, image)
+    labels2 = graph.cut_threshold(labels, rag, 1)+1
+    new_rag = graph.rag_mean_color(img_as_float(image), labels2,sigma=p_sigma)
+    new_cel = percorrer_rag_adj_nodos(new_rag)
+    print new_cel
+    print len(new_cel)
+    desenho_rag(labels2, new_rag, image)
+    
+    
 
 def classify(event):
     global image, c_image
