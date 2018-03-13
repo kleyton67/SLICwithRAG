@@ -23,6 +23,7 @@ from skimage.future import graph
 from skimage.draw import line, circle
 from matplotlib import pyplot as plt
 from skimage.measure import regionprops
+import matplotlib.patheffects as path_effects
 
 from skimage.util import img_as_float
 import numpy as np
@@ -51,6 +52,7 @@ ap.add_argument("-sc", "--compactness", required=False, help="Higher values make
 ap.add_argument("-so", "--outline", required=False, help="Deixa borda do superpixel mais larga: 0 ou 1.", default=0, type=int)
 ap.add_argument("-c",  "--classname", required=False, help="Classificador", default="weka.classifiers.trees.J48", type=str)
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
+ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.7, type=float)
 args = vars(ap.parse_args())
 
 # Atualiza os parâmetros com os valores passados na linha de comando ou com os defaults
@@ -61,6 +63,7 @@ p_sigma = args["sigma"]
 p_compactness = args["compactness"]
 #realca a fronteira
 p_outline = None if (args["outline"] == 0) else (1, 1, 0)
+escala = args["escalonamento"]
 
 classname = args["classname"]
 coptions = args["coptions"].split()
@@ -68,7 +71,11 @@ coptions = args["coptions"].split()
 pasta_banco_imagens = args["banco"]
 nome_imagem_completo = args["imagem"]
 
-image = np.flipud(cv2.imread(nome_imagem_completo))
+#Redimensionando 
+image = cv2.imread(nome_imagem_completo)
+
+image = np.flipud(cv2.resize(image,None,fx=escala, fy=escala, interpolation = cv2.INTER_CUBIC))
+
 #duplicado para guradar somente a parte pintada da rag
 c_image = image.copy()
 image_obj = image.copy()#somente na rag
@@ -120,6 +127,7 @@ cores = [(255, 255, 255), (0, 0, 0)]
 
 # Ponteiro para a janela
 fig = gcf()
+
 
 # Determina o que fazer quando os valores das barras de rolagem com os parâmetros do SLIC forem alterados
 def updateParametros(val):
@@ -257,6 +265,8 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
 	pathToFile = extraiAtributos.nomePastaRaiz + extraiAtributos.nomeBancoImagens + "/"
 	arff2svm.transform(pathToFile+nomeArquivoArff,pathToFile+nomeArquivoArff+".svm")
  
+ 
+#Operacoes
 # Retorna o grafo desenhado na imagem
 def desenho_rag(labels, rag, image):
     '''
@@ -285,6 +295,7 @@ def comparar_labels(labels, labels2):
 
     for a in ax:
         a.axis('off')
+    plt.show()
     
 
 def mostrar_imagens(image, image2):
@@ -408,7 +419,7 @@ def grafo(labels, image):
     print len(new_cel)
     desenho_rag(labels2, new_rag, image)
     
-    
+#Fim da operacoes com a rag
 
 def classify(event):
     global image, c_image
