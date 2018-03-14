@@ -18,22 +18,17 @@
 
 # Importa bibliotecas necessárias
 
-from skimage import data, segmentation, color, filters, io
+from skimage import segmentation, io
 from skimage.future import graph
-from skimage.draw import line, circle
 from matplotlib import pyplot as plt
-from skimage.measure import regionprops
-import matplotlib.patheffects as path_effects
-
 from skimage.util import img_as_float
 import numpy as np
 import argparse
 import cv2
-import networkx as nx
 import os
 import time
 from pylab import *
-from matplotlib.widgets import Slider, Button, RadioButtons
+from matplotlib.widgets import Slider, Button
 from extrai_atributos.extraiAtributos import ExtraiAtributos
 from wekaWrapper import Weka
 
@@ -41,7 +36,7 @@ import arff2svm
 
 # Lê os parâmetros da linha de comando
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", default="../data/imagem_de_teste.jpg",
+ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", default="24h0-000036.jpg",
                 type=str)
 ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de imagens", default="../data/demo",
                 type=str)
@@ -52,7 +47,7 @@ ap.add_argument("-sc", "--compactness", required=False, help="Higher values make
 ap.add_argument("-so", "--outline", required=False, help="Deixa borda do superpixel mais larga: 0 ou 1.", default=0, type=int)
 ap.add_argument("-c",  "--classname", required=False, help="Classificador", default="weka.classifiers.trees.J48", type=str)
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
-ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.7, type=float)
+ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.2, type=float)
 args = vars(ap.parse_args())
 
 # Atualiza os parâmetros com os valores passados na linha de comando ou com os defaults
@@ -64,12 +59,13 @@ p_compactness = args["compactness"]
 #realca a fronteira
 p_outline = None if (args["outline"] == 0) else (1, 1, 0)
 escala = args["escalonamento"]
-
 classname = args["classname"]
 coptions = args["coptions"].split()
 
 pasta_banco_imagens = args["banco"]
 nome_imagem_completo = args["imagem"]
+
+rag = 0
 
 #Redimensionando 
 image = cv2.imread(nome_imagem_completo)
@@ -79,7 +75,6 @@ image = np.flipud(cv2.resize(image,None,fx=escala, fy=escala, interpolation = cv
 #duplicado para guradar somente a parte pintada da rag
 c_image = image.copy()
 image_obj = image.copy()#somente na rag
-
 #Separa o nome da pasta onde está a imagem do nome do arquivo dentro da pasta
 caminho, nome_imagem = os.path.split(nome_imagem_completo)
 #Separa o nome do banco onde está o banco de imagens
@@ -104,7 +99,7 @@ classeAtual = 0
 # Extrai os superpixels e mostra na tela com contornos
 print "Segmentos = %d, Sigma = %d, Compactness = %0.2f e Classe Atual = %d" % (p_segmentos, p_sigma, p_compactness, classeAtual)
 start_time = time.time()
-segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)
+segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)+1
 print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
 
 #imprimi imagem com segmentacao
@@ -118,11 +113,15 @@ slider_compactness = Slider(axes([0.25, 0.15, 0.65, 0.03]), 'Compactness', 0.01,
 slider_classes = Slider(axes([0.25, 0.10, 0.65, 0.03]), 'Classe Atual', 0, 2, valinit=classeAtual, valfmt='%d')
 
 # Cria botoes laterais
-button_arff = Button(axes([0.80, 0.75, 0.15, 0.03]), 'Gerar Arff')
-button_classify = Button(axes([0.80, 0.70, 0.15, 0.03]), 'Classificar')
-button_cv = Button(axes([0.80, 0.65, 0.15, 0.03]), 'CrossValid')
+button_arff = Button(axes([0.80, 0.8, 0.15, 0.04]), 'Gerar Arff')
+button_classify = Button(axes([0.80, 0.7, 0.15, 0.04]), 'Classificar')
+button_cv = Button(axes([0.80, 0.6, 0.15, 0.04]), 'CrossValid')
+button_imagens = Button(axes([0.80, 0.5, 0.15, 0.04]), 'Imagens')
+button_reunir = Button(axes([0.80, 0.4, 0.18, 0.04]), 'reunir e contar')
 
 # Cores usadas para preencher os superpixels com uma cor diferente para cada classe
+if(slider_classes == 2):
+    slider_classes -= 1
 cores = [(255, 255, 255), (0, 0, 0)]
 
 # Ponteiro para a janela
@@ -140,10 +139,10 @@ def updateParametros(val):
     image = c_image.copy()
     
     start_time = time.time()
-    segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)
+    segments = segmentation.slic(img_as_float(image), n_segments=p_segmentos, sigma=p_sigma, compactness=p_compactness)+1
     print("--- Tempo Python skikit-image SLIC: %s segundos ---" % (time.time() - start_time))
     obj.set_data(segmentation.mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments, outline_color=p_outline))
-    draw()
+    plt.draw()
 
 
 # Determina o que fazer quando os valores das barras de rolagem da Classe Atual for alterado
@@ -268,7 +267,7 @@ def extractArff(event = None, nomeArquivoArff = 'training.arff', nomeImagem = No
  
 #Operacoes
 # Retorna o grafo desenhado na imagem
-def desenho_rag(labels, rag, image):
+def desenho_rag(rag, labels):
     '''
         Parametro: 
             labels: array 2d
@@ -279,6 +278,7 @@ def desenho_rag(labels, rag, image):
         
         Imprime o grafo em cima da imagem
     '''
+    global image
     lc = graph.show_rag(labels, rag, image)        
     
     plt.colorbar(lc, fraction=0.03)
@@ -298,20 +298,22 @@ def comparar_labels(labels, labels2):
     plt.show()
     
 
-def mostrar_imagens(image, image2):
+def mostrar_imagens(event):
     '''
     Parametro 
-        duas imagems: Original e copia
+        recebe as duas imagens globais: image e c_image
     
     retorno
         Nada
         
     Plota as duas imagens uma do lado da outra na mesma janela
     '''
+    global image, c_image
+    
     fig, ax = plt.subplots(ncols=2, sharex=True, sharey=True,
                            figsize=(8, 4))
     
-    ax[0].imshow(image2)
+    ax[0].imshow(c_image)
     ax[0].set_title('Original')
     
     ax[1].imshow(image)
@@ -388,41 +390,31 @@ def mostrar_grafo_info(graph):
     for n, dd in NDV: 
         print((n, dd.get('mean color')))
 
-def retirar_arestas(array, rag):
-    for n in array:
-        m = n+1
-        for m in array:
-            if rag.has_edge(n,m) :
-                array.remove(m)
-                m-=1
-            n+=1
-    return array
-
-def grafo(labels, image):
+def grafo(event):
     '''
     
         Responsavel pelas operacoes com grafos
     
     '''
+    print "\n--- Contagem e união dos segmentos ---\n"
+    global rag, image, segments
+    labels = segments+1
+    #incluir caixa de seleção
     rag = graph.rag_mean_color(img_as_float(image), labels,sigma=p_sigma) 
-    #print rag.node[300]['mean color']
-    #desenho_rag(labels, rag, image)
-    cel = percorrer_rag_adj_nodos(rag)
-    print "Celulas encontradas(Rag Original)"
-    print cel
-    print len(cel)
-    desenho_rag(labels, rag, image)
-    labels2 = graph.cut_threshold(labels, rag, 1)+1
+    labels2 = graph.cut_threshold(labels, rag, 1)
     new_rag = graph.rag_mean_color(img_as_float(image), labels2,sigma=p_sigma)
+    desenho_rag(rag, labels)
     new_cel = percorrer_rag_adj_nodos(new_rag)
-    print new_cel
-    print len(new_cel)
-    desenho_rag(labels2, new_rag, image)
+    segments = labels2
+    desenho_rag(new_rag, labels2)
+    print "Total de celulas: %d" % len(new_cel)
+    rag = new_rag
+    print "\n--- Fim da uniao dos segmentos ---\n"
     
 #Fim da operacoes com a rag
 
 def classify(event):
-    global image, c_image
+    global image
     
     start_time = time.time()
     # Extrai os atributos e salva em um arquivo arff
@@ -451,12 +443,7 @@ def classify(event):
             os.remove(arquivo)
             
     print("--- Tempo para classificacao Weka --- %s segundos" % (time.time() - start_time))
-            
-    grafo(segments+1, image)
-    
-    mostrar_imagens(image, c_image)
-            
-    
+
 # Realizar um teste de desempenho de classificação
 def crossValidate(event):    
     # Extrai os atributos e salva em um arquivo arff
@@ -479,5 +466,8 @@ slider_classes.on_changed(updateClasseAtual)
 button_arff.on_clicked(extractArff)
 button_classify.on_clicked(classify)
 button_cv.on_clicked(crossValidate)
+button_imagens.on_clicked(mostrar_imagens)
+button_reunir.on_clicked(grafo)
 
-show()
+
+plt.show()
