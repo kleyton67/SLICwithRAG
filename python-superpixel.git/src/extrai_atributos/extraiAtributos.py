@@ -28,7 +28,7 @@ class ExtraiAtributos(object):
                             
     def extractAll(self, nomeArquivoArff = None, classes = None, overwrite = True):
 
-        print 'Gerando ARFF para o Banco de Imagens ' + self.nomeBancoImagens + "..."
+        #print 'Gerando ARFF para o Banco de Imagens ' + self.nomeBancoImagens + "..."
 
         bancoImagens = BancoImagens(self.nomeBancoImagens,self.nomePastaRaiz)
         extratores = Extratores()
@@ -57,7 +57,7 @@ class ExtraiAtributos(object):
         for classe in classes:
             imagens = bancoImagens.imagens_da_classe(classe)
 
-            print "Processando %s imagens da classe %s " % (len(imagens),classe)
+            #print "Processando %s imagens da classe %s " % (len(imagens),classe)
 
             for imagem in imagens:
                 nomesAtributos, tiposAtributos, valoresAtributos = extratores.extrai_todos(imagem)
