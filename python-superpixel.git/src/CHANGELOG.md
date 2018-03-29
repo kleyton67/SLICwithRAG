@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Contagem e classificacao das celulas a partir de imagens em um diretorio
+- Redimensionamento das imagens, fazendo com que fiquem menores
+
+### Bug not-fixed
+- Imagens compactadas apenas se ja estiverem no repositorio de compactacao
 
 ## [1.0.0] - 2018-02-22
 ### Added

@@ -85,6 +85,22 @@ pasta_banco_imagens = pasta_banco_imagens + "/"
 pasta_raiz = pasta_raiz + "/"
 
 classeAtual = 0
+
+def listar_imagens_diretorio(caminhos_elementos):
+    """
+    parametros:
+        caminhos_eleentos é o diretorio
+        
+    retorno:
+        elementos no diretorio
+    """
+    lista_compactados = []
+    for informacao in caminhos_elementos:
+        caminho, imagens = os.path.split(informacao)
+        lista_compactados+=[imagens,]
+        return lista_compactados
+
+
 def compactar_imagens(pasta_base, pasta_compactada):
     """
         parametros:
@@ -98,13 +114,14 @@ def compactar_imagens(pasta_base, pasta_compactada):
     """
     print"--- Compactando Elementos ---"
     lista_compactados = []
+    elementos_in_compactado = []
     arquivos = [os.path.join(pasta_base, nome) for nome in os.listdir(pasta_base)]
     arquivos_compactados = [os.path.join(pasta_compactada, nome) for nome in os.listdir(pasta_compactada)]
     jpgs = [arq for arq in arquivos if arq.lower().endswith(".jpg")]
     jpgs_compactados = [arq for arq in arquivos_compactados if arq.lower().endswith(".jpg")]
-    for informacao in jpgs_compactados:
-        caminho, imagens = os.path.split(informacao)
-        lista_compactados+=[imagens,]
+    
+    lista_compactados += [listar_imagens_diretorio(jpgs_compactados), ]
+    
     for img in jpgs:
         caminho, nome = os.path.split(img)
         if nome not in lista_compactados:
@@ -113,6 +130,8 @@ def compactar_imagens(pasta_base, pasta_compactada):
             imagem_compactada = np.flipud(cv2.resize(image,None,fx=escala, fy=escala, interpolation = cv2.INTER_CUBIC))
             #guardar imagem compactada na pasta_compactada
             cv2.imwrite(pasta_compactada+nome, imagem_compactada)
+    
+    elementos_in_compactado += [listar_imagens_diretorio(jpgs_compactados), ]
     print"--- Fim da Compactacao de Elementos ---"
     return lista_compactados
 
@@ -173,23 +192,6 @@ def getSegmento(indice):
     # segmento = largestSquare(segmento)
     
     return segmento, mask, mask_inv
-
-
-# Salva um arquivo .tif contendo o superpixel na pasta correspondente a classe
-def saveSegmento(segmento, valorSegmento, classeAtual):
-    # se aquele segmento já foi marcado antes, apaga marcação do banco de imagens
-    for root, dirs, files in os.walk(pasta_banco_imagens):
-        for classe in dirs:
-            arquivo = pasta_banco_imagens + classe + "/" + nome_imagem + "_%05d" % valorSegmento + '.tif'
-            if(os.path.isfile(arquivo)):
-                os.remove(arquivo)
-
-    pasta_classe = pasta_banco_imagens + "classe_%02d" % classeAtual
-    arquivo = pasta_classe + "/" + nome_imagem + "_%05d" % valorSegmento + '.tif'
-    if not os.path.exists(pasta_classe):
-        os.makedirs(pasta_classe)
-    cv2.imwrite(arquivo, segmento)
-    
 
 # Atualiza a imagem pintando o superpixel com a cor da classe informada
 def updateImagem(mask, mask_inv, classeAtual):

@@ -18,7 +18,7 @@
 
 # Importa bibliotecas necessárias
 
-from skimage import segmentation, io
+from skimage import segmentation, io #segementation: para a slic 
 from skimage.future import graph
 from matplotlib import pyplot as plt
 from skimage.util import img_as_float
@@ -36,7 +36,7 @@ import arff2svm
 
 # Lê os parâmetros da linha de comando
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", default="arquivos_base/24h0-000036.jpg",
+ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", default="arquivos_base/72h1.1-000001.jpg",
                 type=str)
 ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de imagens", default="../data/demo",
                 type=str)
