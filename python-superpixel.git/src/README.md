@@ -7,6 +7,3 @@ Kleyton Sartori Leite
 ### Add
 - Graficos para procurar diretorios de imagens
 - Multithread para classificação WEKA
-
-### Bug
-- Apenas imagens no diretorio de compactados são classificados

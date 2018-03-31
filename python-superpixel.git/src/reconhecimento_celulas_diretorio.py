@@ -192,7 +192,7 @@ def getSegmento(indice):
     # segmento = largestSquare(segmento)
     
     return segmento, mask, mask_inv
-
+    
 # Atualiza a imagem pintando o superpixel com a cor da classe informada
 def updateImagem(mask, mask_inv, classeAtual):
     global image, c_image
