@@ -36,9 +36,9 @@ import arff2svm
 
 # Lê os parâmetros da linha de comando
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", default="arquivos_base/72h1.1-000001.jpg",
+ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", default="arquivos_base/48h1.1-000020.jpg",
                 type=str)
-ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de imagens", default="../data/demo",
+ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de imagens", default="../data/demo",    
                 type=str)
 ap.add_argument("-mse", "--maxsegmentos", required=False, help="Número máximo de segmentos", default=1000, type=int)
 ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=400, type=int)
@@ -97,6 +97,9 @@ pylab.axis([0, width, 0, height])
 
 # Classe que será gerada quando o usuário clicar em um superpixel
 classeAtual = 0
+
+#COnta a classificação, poi eh necessario para reuniao
+classificacao = 0
 
 # Extrai os superpixels e mostra na tela com contornos
 print "Segmentos = %d, Sigma = %d, Compactness = %0.2f e Classe Atual = %d" % (p_segmentos, p_sigma, p_compactness, classeAtual)
@@ -345,6 +348,8 @@ def find_in_tuple_2(array, elemento):
 
 def percorrer_rag_adj_nodos(graph):
     '''
+        Percorre grafo pelos nodos adjacentes  e guarda nodos diferentes do]
+    fundo
         Parametros: 
             Grafo
         Return:
@@ -393,15 +398,19 @@ def mostrar_grafo_info(graph):
         print((n, dd.get('mean color')))
 
 def grafo(event):
+    global classificacao
     '''
     
         Responsavel pelas operacoes com grafos
     
     '''
+    if classificacao == 0:
+        print"Executar classificação para a reunião e contagem"
+        classify(1)
+        
     print "\n--- Contagem e união dos segmentos ---\n"
     global rag, image, segments
     labels = segments+1
-    #incluir caixa de seleção
     rag = graph.rag_mean_color(img_as_float(image), labels,sigma=p_sigma) 
     labels2 = graph.cut_threshold(labels, rag, 1)
     new_rag = graph.rag_mean_color(img_as_float(image), labels2,sigma=p_sigma)
@@ -416,7 +425,7 @@ def grafo(event):
 #Fim da operacoes com a rag
 
 def classify(event):
-    global image
+    global image, classificacao
     
     start_time = time.time()
     # Extrai os atributos e salva em um arquivo arff
@@ -445,6 +454,7 @@ def classify(event):
             os.remove(arquivo)
             
     print("--- Tempo para classificacao Weka --- %s segundos" % (time.time() - start_time))
+    classificacao+=1
 
 # Realizar um teste de desempenho de classificação
 def crossValidate(event):    
@@ -464,7 +474,6 @@ fig.canvas.mpl_connect('button_press_event', onclick)
 slider_segmentos.on_changed(updateParametros)
 slider_sigma.on_changed(updateParametros)
 slider_compactness.on_changed(updateParametros)
-slider_classes.on_changed(updateClasseAtual)
 button_arff.on_clicked(extractArff)
 button_classify.on_clicked(classify)
 button_cv.on_clicked(crossValidate)

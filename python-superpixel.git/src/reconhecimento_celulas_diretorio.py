@@ -45,6 +45,9 @@ ap.add_argument("-dir_base", "--diretorio_base", required=False, help="Diretorio
 ap.add_argument("-dir_comp", "--diretorio_compactado", required = False, 
                 help="Diretorio com imagens compactadas\nPra nao compactar utilizar -es 0(fator dde escalonamento = 0)",
                 default = "arquivos_compactados/", type=str)
+ap.add_argument("-dir_res", "--diretorio_resultado", required = False, 
+                help="Diretorio imagens de resultado (imagens originais + imagens classificadas)",
+                default = "arquivos_resultados/", type=str)
 ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de imagens", default="../data/demo",
                 type=str)
 ap.add_argument("-mse", "--maxsegmentos", required=False, help="Número máximo de segmentos", default=1000,
@@ -61,12 +64,14 @@ ap.add_argument("-c",  "--classname", required=False, help="Classificador", defa
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
 ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.2, type=float)
 
+
 args = vars(ap.parse_args())
 
 # Atualiza os parâmetros com os valores passados na linha de comando ou com os defaults
 
 p_diretorio = args["diretorio_base"]
 p_compactado = args["diretorio_compactado"]
+p_resultado = args["diretorio_resultado"]
 p_maxsegmentos = args["maxsegmentos"]
 p_segmentos = args["segmentos"]
 p_sigma = args["sigma"]
@@ -133,7 +138,7 @@ def compactar_imagens(pasta_base, pasta_compactada):
     
     elementos_in_compactado += [listar_imagens_diretorio(jpgs_compactados), ]
     print"--- Fim da Compactacao de Elementos ---"
-    return lista_compactados
+    return elementos_in_compactado
 
 def segmentacao_slic():
     global segments
@@ -334,25 +339,61 @@ def classify():
             os.remove(arquivo)
             
     print("--- Tempo para classificacao Weka --- %s segundos" % (time.time() - start_time))
-
-jpgs_compactados = compactar_imagens(p_diretorio, p_compactado )
+    
+def salvar_diretorio_nome_celulas(diretorio, nome_imagem, total_celulas):
+    """
+        Salva no diretorio a imagem original com a imagem de classificacao com 
+        o nome : nome+.numero_celulas.jpeg
+        
+        parametros: 
+           diretorio : diretorio da imagem
+           nome_imagem : nome da imagem
+           total_celulas : numero de celulas encontradas pela classificacao
+           
+        retorno:
+            NULL
+    """
+    global image, c_image
+    print diretorio
+    print nome_imagem
+    print total_celulas
+    nome_imagem = nome_imagem.strip(".jpg")
+    if not os.path.exists(diretorio+nome_imagem):
+        os.mkdir(diretorio+nome_imagem)
+    cv2.imwrite(diretorio+"/"+nome_imagem+"/"+nome_imagem+"."+str(total_celulas)+".jpg", image)
+    cv2.imwrite(diretorio+"/"+nome_imagem+"/"+nome_imagem+"res."+str(total_celulas)+".jpg", c_image)
+    
+    
+    
+compactar_imagens(p_diretorio, p_compactado )
 dicionario = {0 : 0}
 rag = 0
 segments = 0
 
-print "procurar no diretorio"
-print jpgs_compactados
 arquivos_compactados = [os.path.join(p_compactado, nome) for nome in os.listdir(p_compactado)]
 jpgs_comp_completo = [arq for arq in arquivos_compactados if arq.lower().endswith(".jpg")]
 
+print "procurar no diretorio"
+print arquivos_compactados
+
+#image = cv2.imread(jpgs_comp_completo[1])
+#c_image = image.copy()
+#caminho, nome = os.path.split(jpgs_comp_completo[0])
+#salvar_diretorio_nome_celulas(p_resultado, nome, 50)
 i=0
-for img in jpgs_compactados:
+for img in jpgs_comp_completo:
+        caminho, nome = os.path.split(img)
+        print nome
         image = cv2.imread(jpgs_comp_completo[i])
         c_image = image.copy()
         height, width, channels = image.shape
         segmentacao_slic()
         classify()
-        dicionario[img] = grafo()
+        dicionario[nome] = grafo()
+        print p_resultado
+        print nome
+        print dicionario[nome]
+        salvar_diretorio_nome_celulas(p_resultado, nome, dicionario[nome])
         i+=1
         
 print dicionario
