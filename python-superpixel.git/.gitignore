@@ -12,3 +12,4 @@ src/build/*
 !data/demo/.gitignore
 !data/slicParametros.png
 *.txt
+*.jpg

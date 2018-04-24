@@ -72,7 +72,7 @@ class Weka(object):
             prediction = self.classifier.distribution_for_instance(inst)
             cl = int(values[prediction.argmax()][7:])
             
-            print 'Classe:', cl
+            #print 'Classe:', cl
             classes.append(cl)
 
         return classes

@@ -52,17 +52,17 @@ ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de image
                 type=str)
 ap.add_argument("-mse", "--maxsegmentos", required=False, help="Número máximo de segmentos", default=1000,
                 type=int)
-ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=400,
+ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=600,
                 type=int)
-ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=5, type=int)
+ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=3, type=int)
 ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic",
-                default=6.0, type=float)
+                default=18.0, type=float)
 ap.add_argument("-so", "--outline", required=False, help="Deixa borda do superpixel mais larga: 0 ou 1.", default=0,
                 type=int)
 ap.add_argument("-c",  "--classname", required=False, help="Classificador", default="weka.classifiers.trees.J48",
                 type=str)
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
-ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.2, type=float)
+ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.7, type=float)
 
 
 args = vars(ap.parse_args())
@@ -91,21 +91,6 @@ pasta_raiz = pasta_raiz + "/"
 
 classeAtual = 0
 
-def listar_imagens_diretorio(caminhos_elementos):
-    """
-    parametros:
-        caminhos_eleentos é o diretorio
-        
-    retorno:
-        elementos no diretorio
-    """
-    lista_compactados = []
-    for informacao in caminhos_elementos:
-        caminho, imagens = os.path.split(informacao)
-        lista_compactados+=[imagens,]
-        return lista_compactados
-
-
 def compactar_imagens(pasta_base, pasta_compactada):
     """
         parametros:
@@ -117,16 +102,24 @@ def compactar_imagens(pasta_base, pasta_compactada):
             pactadas com sucesso (TRUE) ou ocorreu algum erro(FALSE)
     
     """
-    print"--- Compactando Elementos ---"
     lista_compactados = []
-    elementos_in_compactado = []
+    print"--- Compactando Elementos ---"
+    #obtem arquivos com diretorio. diretorio/arquivo.ext
     arquivos = [os.path.join(pasta_base, nome) for nome in os.listdir(pasta_base)]
+    #obtem arquivos compactados
     arquivos_compactados = [os.path.join(pasta_compactada, nome) for nome in os.listdir(pasta_compactada)]
+    #obtem somente arquivos da extensão jpeg
     jpgs = [arq for arq in arquivos if arq.lower().endswith(".jpg")]
     jpgs_compactados = [arq for arq in arquivos_compactados if arq.lower().endswith(".jpg")]
+    print "jpgs compactados"
+    print jpgs_compactados
     
-    lista_compactados += [listar_imagens_diretorio(jpgs_compactados), ]
-    
+    #retirar diretorio da string da imagem
+    for imagens in jpgs_compactados:
+        diretorio, imagem = os.path.split(imagens)
+        lista_compactados += [(imagem), ]
+        
+    n_comp = 0
     for img in jpgs:
         caminho, nome = os.path.split(img)
         if nome not in lista_compactados:
@@ -135,10 +128,17 @@ def compactar_imagens(pasta_base, pasta_compactada):
             imagem_compactada = np.flipud(cv2.resize(image,None,fx=escala, fy=escala, interpolation = cv2.INTER_CUBIC))
             #guardar imagem compactada na pasta_compactada
             cv2.imwrite(pasta_compactada+nome, imagem_compactada)
-    
-    elementos_in_compactado += [listar_imagens_diretorio(jpgs_compactados), ]
+            n_comp +=1
+            
+    #lista novos compactados   
+    if n_comp > 0:
+        jpgs_compactados = [arq for arq in arquivos_compactados if arq.lower().endswith(".jpg")]
+        for imagens in jpgs_compactados:
+            diretorio, imagem = os.path.split(imagens)
+            lista_compactados += [(imagem), ]
+
     print"--- Fim da Compactacao de Elementos ---"
-    return elementos_in_compactado
+    return lista_compactados
 
 def segmentacao_slic():
     global segments
@@ -293,18 +293,16 @@ def grafo():
     
     '''
     print "\n--- Contagem e união dos segmentos ---\n"
-    start_time = time.time()
     global rag, image, segments
     labels = segments+1
-    #incluir caixa de seleção
     rag = graph.rag_mean_color(img_as_float(image), labels,sigma=p_sigma) 
     labels2 = graph.cut_threshold(labels, rag, 1)
     new_rag = graph.rag_mean_color(img_as_float(image), labels2,sigma=p_sigma)
     new_cel = percorrer_rag_adj_nodos(new_rag)
     segments = labels2
+    print "Total de celulas: %d" % len(new_cel)
     rag = new_rag
     print "\n--- Fim da uniao dos segmentos ---\n"
-    print("--- Tempo para união dos seguimentos --- %s segundos" % (time.time() - start_time))
     return len(new_cel)
     
 #Fim da operacoes com a rag
@@ -331,6 +329,7 @@ def classify():
             
             extractArff(nomeArquivoArff='test.arff', nomeImagem='test.tif')
             
+            #impressao de classes esta aqui
             classes = weka.classify('test.arff')
             
             updateImagem(mask, mask_inv, classes[0])
@@ -365,7 +364,7 @@ def salvar_diretorio_nome_celulas(diretorio, nome_imagem, total_celulas):
     
     
     
-compactar_imagens(p_diretorio, p_compactado )
+imagens_compactadas = compactar_imagens(p_diretorio, p_compactado )
 dicionario = {0 : 0}
 rag = 0
 segments = 0
@@ -373,27 +372,19 @@ segments = 0
 arquivos_compactados = [os.path.join(p_compactado, nome) for nome in os.listdir(p_compactado)]
 jpgs_comp_completo = [arq for arq in arquivos_compactados if arq.lower().endswith(".jpg")]
 
-print "procurar no diretorio"
-print arquivos_compactados
-
-#image = cv2.imread(jpgs_comp_completo[1])
-#c_image = image.copy()
-#caminho, nome = os.path.split(jpgs_comp_completo[0])
-#salvar_diretorio_nome_celulas(p_resultado, nome, 50)
 i=0
-for img in jpgs_comp_completo:
-        caminho, nome = os.path.split(img)
-        print nome
+for img in imagens_compactadas:
+        print "Arquivo sendo processado: "
+        print img
+        print 
         image = cv2.imread(jpgs_comp_completo[i])
         c_image = image.copy()
-        height, width, channels = image.shape
         segmentacao_slic()
+        height, width, channels = image.shape
         classify()
-        dicionario[nome] = grafo()
-        print p_resultado
-        print nome
-        print dicionario[nome]
-        salvar_diretorio_nome_celulas(p_resultado, nome, dicionario[nome])
+        dicionario[img] = grafo()
+        salvar_diretorio_nome_celulas(p_resultado, img, dicionario[img])
         i+=1
         
 print dicionario
+print arquivos_compactados

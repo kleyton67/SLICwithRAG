@@ -36,19 +36,19 @@ import arff2svm
 
 # Lê os parâmetros da linha de comando
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", default="arquivos_base/48h1.1-000020.jpg",
+ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", default="arquivos_base/7D1.1-000009.45.jpg",
                 type=str)
 ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de imagens", default="../data/demo",    
                 type=str)
 ap.add_argument("-mse", "--maxsegmentos", required=False, help="Número máximo de segmentos", default=1000, type=int)
-ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=400, type=int)
-ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=5, type=int)
-ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic", default=6.0,
+ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=600, type=int)
+ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=3, type=int)
+ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic", default=18.0,
                 type=float)
 ap.add_argument("-so", "--outline", required=False, help="Deixa borda do superpixel mais larga: 0 ou 1.", default=0, type=int)
 ap.add_argument("-c",  "--classname", required=False, help="Classificador", default="weka.classifiers.trees.J48", type=str)
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
-ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.2, type=float)
+ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 1, type=float)
 
 args = vars(ap.parse_args())
 
@@ -126,7 +126,7 @@ button_reunir = Button(pylab.axes([0.80, 0.4, 0.18, 0.04]), 'reunir e contar')
 
 # Cores usadas para preencher os superpixels com uma cor diferente para cada classe
 if(slider_classes == 2):
-    slider_classes -= 1
+    slider_classes = 1
 cores = [(255, 255, 255), (0, 0, 0)]
 
 # Ponteiro para a janela
@@ -474,6 +474,7 @@ fig.canvas.mpl_connect('button_press_event', onclick)
 slider_segmentos.on_changed(updateParametros)
 slider_sigma.on_changed(updateParametros)
 slider_compactness.on_changed(updateParametros)
+slider_classes.on_changed(updateClasseAtual)
 button_arff.on_clicked(extractArff)
 button_classify.on_clicked(classify)
 button_cv.on_clicked(crossValidate)
