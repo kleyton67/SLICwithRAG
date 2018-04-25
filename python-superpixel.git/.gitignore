@@ -1,15 +1,1 @@
-*.pyc
-data/*
-!data/imagem_de_teste.jpg
-*~ 
-*wrap* 
-*.o 
-*.so 
-*.pyc
-*.cxx
-src/build
-src/build/*
-!data/demo/.gitignore
-!data/slicParametros.png
-*.txt
-*.jpg
+
