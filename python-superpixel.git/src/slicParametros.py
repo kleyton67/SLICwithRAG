@@ -41,14 +41,14 @@ ap.add_argument("-i", "--imagem", required=False, help="Arquivo com a imagem", d
 ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de imagens", default="../data/demo",    
                 type=str)
 ap.add_argument("-mse", "--maxsegmentos", required=False, help="Número máximo de segmentos", default=1000, type=int)
-ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=600, type=int)
+ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=800, type=int)
 ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=3, type=int)
 ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic", default=18.0,
                 type=float)
 ap.add_argument("-so", "--outline", required=False, help="Deixa borda do superpixel mais larga: 0 ou 1.", default=0, type=int)
 ap.add_argument("-c",  "--classname", required=False, help="Classificador", default="weka.classifiers.trees.J48", type=str)
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
-ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 1, type=float)
+ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 1.0, type=float)
 
 args = vars(ap.parse_args())
 
@@ -74,7 +74,7 @@ image = cv2.imread(nome_imagem_completo)
 
 image = np.flipud(cv2.resize(image,None,fx=escala, fy=escala, interpolation = cv2.INTER_CUBIC))
 
-#duplicado para guradar somente a parte pintada da rag
+#duplicado para guardar somente a parte pintada da rag
 c_image = image.copy()
 image_obj = image.copy()#somente na rag
 #Separa o nome da pasta onde está a imagem do nome do arquivo dentro da pasta
@@ -414,10 +414,10 @@ def grafo(event):
     rag = graph.rag_mean_color(img_as_float(image), labels,sigma=p_sigma) 
     labels2 = graph.cut_threshold(labels, rag, 1)
     new_rag = graph.rag_mean_color(img_as_float(image), labels2,sigma=p_sigma)
-    desenho_rag(rag, labels)
+    #desenho_rag(rag, labels)
     new_cel = percorrer_rag_adj_nodos(new_rag)
     segments = labels2
-    desenho_rag(new_rag, labels2)
+    #desenho_rag(new_rag, labels2)
     print "Total de celulas: %d" % len(new_cel)
     rag = new_rag
     print "\n--- Fim da uniao dos segmentos ---\n"

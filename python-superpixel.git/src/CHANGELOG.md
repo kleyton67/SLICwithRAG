@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Contagem e classificacao das celulas a partir de imagens em um diretorio
 - Redimensionamento das imagens, fazendo com que fiquem menores
 
+###Fixed
+- Funcao de contagem lenta, e não da resultados na slicParametros.
 
 ## [1.0.0] - 2018-02-22
 ### Added
@@ -19,7 +21,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 -
-
-###Fixed
-
 

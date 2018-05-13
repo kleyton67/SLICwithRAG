@@ -37,6 +37,7 @@ import time
 from extrai_atributos.extraiAtributos import ExtraiAtributos
 from wekaWrapper import Weka
 import arff2svm
+import sys
 
 # Lê os parâmetros da linha de comando
 ap = argparse.ArgumentParser()
@@ -52,7 +53,7 @@ ap.add_argument("-b", "--banco", required=False, help="Caminho do banco de image
                 type=str)
 ap.add_argument("-mse", "--maxsegmentos", required=False, help="Número máximo de segmentos", default=1000,
                 type=int)
-ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=600,
+ap.add_argument("-se", "--segmentos", required=False, help="Número aproximado de segmentos", default=800,
                 type=int)
 ap.add_argument("-si", "--sigma", required=False, help="Sigma", default=3, type=int)
 ap.add_argument("-sc", "--compactness", required=False, help="Higher values makes superpixel shapes more square/cubic",
@@ -62,7 +63,7 @@ ap.add_argument("-so", "--outline", required=False, help="Deixa borda do superpi
 ap.add_argument("-c",  "--classname", required=False, help="Classificador", default="weka.classifiers.trees.J48",
                 type=str)
 ap.add_argument("-co", "--coptions", required=False, help="Opcoes do classificador", default="-C 0.3", type=str)
-ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.7, type=float)
+ap.add_argument("-es", "--escalonamento", required = False, help="Fator de redução da Imagem", default = 0.8, type=float)
 
 
 args = vars(ap.parse_args())
@@ -81,6 +82,14 @@ p_outline = None if (args["outline"] == 0) else (1, 1, 0)
 escala = args["escalonamento"]
 classname = args["classname"]
 coptions = args["coptions"].split()
+
+if not os.path.exists(p_diretorio):
+    print "ERROR: Diretorio de imagens ausente! Saindo!"
+    sys.exit()
+if not os.path.exists(p_compactado):
+    os.mkdir(p_compactado)
+if not os.path.exists(p_resultado):
+    os.mkdir(p_resultado)
 
 pasta_banco_imagens = args["banco"]
 
@@ -102,6 +111,7 @@ def compactar_imagens(pasta_base, pasta_compactada):
             pactadas com sucesso (TRUE) ou ocorreu algum erro(FALSE)
     
     """
+    global escala
     lista_compactados = []
     print"--- Compactando Elementos ---"
     #obtem arquivos com diretorio. diretorio/arquivo.ext
@@ -111,8 +121,6 @@ def compactar_imagens(pasta_base, pasta_compactada):
     #obtem somente arquivos da extensão jpeg
     jpgs = [arq for arq in arquivos if arq.lower().endswith(".jpg")]
     jpgs_compactados = [arq for arq in arquivos_compactados if arq.lower().endswith(".jpg")]
-    print "jpgs compactados"
-    print jpgs_compactados
     
     #retirar diretorio da string da imagem
     for imagens in jpgs_compactados:
@@ -129,16 +137,7 @@ def compactar_imagens(pasta_base, pasta_compactada):
             #guardar imagem compactada na pasta_compactada
             cv2.imwrite(pasta_compactada+nome, imagem_compactada)
             n_comp +=1
-            
-    #lista novos compactados   
-    if n_comp > 0:
-        jpgs_compactados = [arq for arq in arquivos_compactados if arq.lower().endswith(".jpg")]
-        for imagens in jpgs_compactados:
-            diretorio, imagem = os.path.split(imagens)
-            lista_compactados += [(imagem), ]
-
     print"--- Fim da Compactacao de Elementos ---"
-    return lista_compactados
 
 def segmentacao_slic():
     global segments
@@ -364,14 +363,20 @@ def salvar_diretorio_nome_celulas(diretorio, nome_imagem, total_celulas):
     
     
     
-imagens_compactadas = compactar_imagens(p_diretorio, p_compactado )
+compactar_imagens(p_diretorio, p_compactado )
 dicionario = {0 : 0}
 rag = 0
 segments = 0
+imagens_compactadas = []
 
 arquivos_compactados = [os.path.join(p_compactado, nome) for nome in os.listdir(p_compactado)]
 jpgs_comp_completo = [arq for arq in arquivos_compactados if arq.lower().endswith(".jpg")]
 
+for imagens in jpgs_comp_completo:
+        diretorio, imagem = os.path.split(imagens)
+        imagens_compactadas += [(imagem), ]
+
+print " --- Total de imagens sendo processada %d ---  " % len(imagens_compactadas)
 i=0
 for img in imagens_compactadas:
         print "Arquivo sendo processado: "
@@ -387,4 +392,4 @@ for img in imagens_compactadas:
         i+=1
         
 print dicionario
-print arquivos_compactados
+#print arquivos_compactados

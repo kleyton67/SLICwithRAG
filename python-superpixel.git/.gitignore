@@ -1,1 +1,5 @@
-
+.gitignore
+resultado/
+src/imagens-teste/
+python-superpixel.git/src/arquivos_compactados/
+python-superpixel.git/src/arquivos_resultados/
