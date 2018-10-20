@@ -414,10 +414,10 @@ def grafo(event):
     rag = graph.rag_mean_color(img_as_float(image), labels,sigma=p_sigma) 
     labels2 = graph.cut_threshold(labels, rag, 1)
     new_rag = graph.rag_mean_color(img_as_float(image), labels2,sigma=p_sigma)
-    #desenho_rag(rag, labels)
+    desenho_rag(rag, labels)
     new_cel = percorrer_rag_adj_nodos(new_rag)
     segments = labels2
-    #desenho_rag(new_rag, labels2)
+    desenho_rag(new_rag, labels2)
     print "Total de celulas: %d" % len(new_cel)
     rag = new_rag
     print "\n--- Fim da uniao dos segmentos ---\n"
