@@ -305,3 +305,8 @@ Se houver um erro na importação do módulo ou na utilização CUDA, o programa
   - Utilizar o weka para experimentos com diferentes tipos de classificadores
 
 
+## Desenvolvedor
+Kleyton Leite (Desenvolvedor junior em  Python, JS fullstack);
+
+## Fonte
+Trabalho feito a partir de um fork do professor Emerson Pistori, vide /src/README.MD
